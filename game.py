@@ -1,8 +1,22 @@
 import pygame
 import sys
+import random
 from settings import *
 from sprites import Player, Enemy, Bullet, Platform, Goal
 from levels import LEVELS
+
+STORIES = [
+    "The princess of Cringestan is onto her next journey to defeat some blockhead dumbfucks.",
+    "After eating a suspicious mushroom, our heroine woke up in a forest with zero memory and maximum violence.",
+    "The kingdom of Blandor is under attack by literally the most annoying enemies ever. Only one girl can fix this, apparently.",
+    "Legend says a brave girl once told the demon king to touch grass. He did not take it well. This is that story.",
+    "The Crystal of Oopsie-Daisy has been stolen by some random rando. She sighed, put on her boots, and decided to deal with it.",
+    "A prophecy said a chosen one would arise and save everyone. Nobody else showed up, so she just went herself.",
+    "The villain's entire plan was to be extremely punchable. It worked too well.",
+    "After failing her exams, she decided a life-threatening adventure was a totally reasonable alternative. It was not.",
+    "The evil lord Blockhead has unleashed his army of idiots upon the land. Our girl grabbed her boots and said 'not today'.",
+    "She had plans this weekend. Now she has enemies. Thanks, prophecy.",
+]
 
 
 class Game:
@@ -47,8 +61,9 @@ class Game:
         e_col      = self.theme['enemy_color']
         enemy_list = data['enemies']
         for i, (x, floor_y, patrol) in enumerate(enemy_list):
-            is_boss = (i == len(enemy_list) - 1)   # last entry is always the boss
-            self.enemies.add(Enemy(x, floor_y, patrol, e_col, is_boss))
+            is_boss   = (i == len(enemy_list) - 1)
+            aggressive = is_boss and (num == 3)     # only level 3 boss chases
+            self.enemies.add(Enemy(x, floor_y, patrol, e_col, is_boss, aggressive))
 
         gx, gy = data['goal']
         self.goal_group.add(Goal(gx, gy))
@@ -75,6 +90,11 @@ class Game:
                         self.run_no_hit     = True
                         self.run_all_killed = True
                         self.load_level(1)
+                        self.story_text = random.choice(STORIES)
+                        self.state = 'story'
+
+                elif self.state == 'story':
+                    if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         self.state = 'playing'
 
                 elif self.state == 'playing':
@@ -114,7 +134,7 @@ class Game:
         if self.shoot_cd > 0:
             self.shoot_cd -= 1
 
-        self.enemies.update()
+        self.enemies.update(self.player.rect.centerx)
         self.bullets.update()
 
         # Boss popup countdown (only ticks while playing)
@@ -291,7 +311,59 @@ class Game:
             hint = "X/Z: Shoot  |  Stomp from above  |  Double Jump"
         self._text(self.font_sm, hint, (220, 220, 180), WIDTH // 2, HEIGHT - 26)
 
+    def _wrap_text(self, text, font, max_w):
+        """Split text into lines that fit within max_w pixels."""
+        words = text.split()
+        lines, current = [], ''
+        for word in words:
+            test = (current + ' ' + word).strip()
+            if font.size(test)[0] <= max_w:
+                current = test
+            else:
+                if current:
+                    lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines
+
     # ── Screen states ─────────────────────────────────────────────
+
+    def draw_story(self):
+        self.screen.fill((10, 8, 25))
+
+        # Star field
+        for i in range(80):
+            pygame.draw.circle(self.screen, (180 + i % 75, 180 + i % 75, 200),
+                               ((i * 137 + 20) % WIDTH, (i * 97 + 15) % HEIGHT), 1)
+
+        # "CHAPTER 1" header
+        self._text(self.font_lg, "~ Chapter 1 ~", (180, 150, 255), WIDTH // 2, 60)
+
+        # Story text box
+        box_x, box_y = 60, 120
+        box_w, box_h = WIDTH - 120, 260
+        box_surf = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+        box_surf.fill((30, 20, 60, 200))
+        pygame.draw.rect(box_surf, (120, 90, 200), (0, 0, box_w, box_h), 2, border_radius=8)
+        self.screen.blit(box_surf, (box_x, box_y))
+
+        # Wrapped story text
+        lines = self._wrap_text(self.story_text, self.font_md, box_w - 40)
+        ty = box_y + 28
+        for line in lines:
+            self._text(self.font_md, line, (230, 220, 255), WIDTH // 2, ty)
+            ty += 38
+
+        # Player sprite preview (bottom-left of box)
+        sprite = self.player.image_right
+        big = pygame.transform.scale(sprite, (sprite.get_width() * 3, sprite.get_height() * 3))
+        self.screen.blit(big, (box_x + 20, box_y + box_h - big.get_height() - 10))
+
+        # Prompt
+        self._text(self.font_md, "Press SPACE to begin the journey!",
+                   (255, 215, 0), WIDTH // 2, HEIGHT - 55)
+        self._text(self.font_sm, "(or ENTER)", (150, 150, 150), WIDTH // 2, HEIGHT - 28)
 
     def draw_start(self):
         self.screen.fill((20, 20, 50))
@@ -396,6 +468,7 @@ class Game:
     def draw(self):
         dispatch = {
             'start':          self.draw_start,
+            'story':          self.draw_story,
             'playing':        self.draw_game,
             'level_complete': self.draw_level_complete,
             'game_over':      self.draw_game_over,

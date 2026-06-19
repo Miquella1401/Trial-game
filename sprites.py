@@ -5,59 +5,89 @@ from settings import (
 )
 
 
-# ── Player sprite: pixel-art anime girl (Terraria-ish adventurer) ──────────
-PLAYER_PIX = 2  # size of one "pixel" block, in real pixels
-
-PLAYER_PALETTE = {
-    '.': None,                  # transparent
-    'H': (255, 105, 180),       # hair main - hot pink
-    'h': (214, 80, 150),        # hair shadow
-    'S': (255, 224, 196),       # skin
-    'E': (70, 60, 110),         # eyes
-    'W': (255, 255, 255),       # eye highlight
-    'C': (255, 160, 180),       # cheek blush
-    'D': (110, 190, 250),       # dress main - sky blue
-    'G': (255, 215, 80),        # gold trim
-    'L': (235, 235, 245),       # stockings
-    'B': (101, 67, 33),         # boots
-}
-
-# 14 columns x 19 rows -> 28x38 px at PLAYER_PIX=2 (matches the old hitbox)
-PLAYER_SPRITE = [
-    "..HHHHHHHHHH..",
-    ".HHHHHHHHHHHG.",
-    "HHhSSSSSSSShHH",
-    "HhSSSSSSSSSShH",
-    "HSSEESSSSEESSH",
-    "HSSWESSSSWESSH",
-    "hSCSSSSSSSSCSh",
-    "hhSSSSSSSSSShh",
-    "hhSSDDDDDDSShh",
-    "hDDDGGGGGGDDDh",
-    "SDDDDDDDDDDDDS",
-    "SDDDDDDDDDDDDS",
-    "SDDDDDDDDDDDDS",
-    "SSDDDDDDDDDDSS",
-    "..GGGGGGGGGG..",
-    "..LLL....LLL..",
-    "..LLL....LLL..",
-    "..BBB....BBB..",
-    "..BBB....BBB..",
-]
-
-
 def _build_player_surface():
-    pix = PLAYER_PIX
-    w = len(PLAYER_SPRITE[0]) * pix
-    h = len(PLAYER_SPRITE) * pix
-    surf = pygame.Surface((w, h), pygame.SRCALPHA)
-    for ry, row in enumerate(PLAYER_SPRITE):
-        for cx, ch in enumerate(row):
-            color = PLAYER_PALETTE[ch]
-            if color is None:
-                continue
-            surf.fill(color, (cx * pix, ry * pix, pix, pix))
-    return surf
+    W, H = 32, 46
+    s = pygame.Surface((W, H), pygame.SRCALPHA)
+
+    HC  = (255, 118, 190);  HD  = (205, 75, 150);   HL  = (255, 185, 225)
+    SK  = (255, 228, 200);  EI  = (88, 148, 238);   EP  = (26, 18, 60)
+    EH  = (255, 255, 255);  BLH = (255, 165, 190);  DR  = (148, 196, 255)
+    DS  = (95, 142, 220);   GT  = (255, 210, 55);   RB  = (255, 70, 125)
+    RBL = (255, 130, 168);  ST  = (242, 242, 255);  BT  = (95, 63, 38)
+    BTL = (132, 92, 62)
+
+    # ── Left twin tail ────────────────────────────────────────────
+    pygame.draw.ellipse(s, HD,  (0, 4, 10, 28))
+    pygame.draw.ellipse(s, HC,  (1, 5,  8, 26))
+    pygame.draw.ellipse(s, HL,  (5, 6,  3,  9))
+    pygame.draw.rect   (s, RB,  (1, 28,  8,  3))
+    pygame.draw.rect   (s, RBL, (2, 26,  5,  5))
+
+    # ── Right twin tail ───────────────────────────────────────────
+    pygame.draw.ellipse(s, HD,  (22, 4, 10, 28))
+    pygame.draw.ellipse(s, HC,  (23, 5,  8, 26))
+    pygame.draw.ellipse(s, HL,  (24, 6,  3,  9))
+    pygame.draw.rect   (s, RB,  (23, 28,  8,  3))
+    pygame.draw.rect   (s, RBL, (25, 26,  5,  5))
+
+    # ── Hair dome ─────────────────────────────────────────────────
+    pygame.draw.ellipse(s, HC, (7, 0, 18, 14))
+    pygame.draw.ellipse(s, HD, (7, 0, 18,  5))
+    pygame.draw.ellipse(s, HL, (10, 1, 10,  5))
+
+    # ── Face ──────────────────────────────────────────────────────
+    pygame.draw.ellipse(s, SK, (8, 7, 16, 18))
+
+    # ── Bangs (drawn after face so they layer over it) ────────────
+    pygame.draw.rect   (s, HC, (8,  7, 3, 8))
+    pygame.draw.rect   (s, HC, (21, 7, 3, 8))
+    pygame.draw.ellipse(s, HC, (9,  6, 14, 7))
+    pygame.draw.rect   (s, HD, (8,  7, 16, 2))
+
+    # ── Eyes ──────────────────────────────────────────────────────
+    for ex in (9, 18):
+        pygame.draw.rect(s, EP,  (ex,   12, 5, 7))   # dark outline
+        pygame.draw.rect(s, EI,  (ex+1, 12, 3, 6))   # iris blue
+        pygame.draw.rect(s, EP,  (ex+1, 15, 3, 4))   # pupil
+        pygame.draw.rect(s, EH,  (ex+1, 12, 2, 2))   # top sparkle
+        pygame.draw.rect(s, EH,  (ex+3, 17, 1, 1))   # bottom sparkle
+
+    # ── Blush ─────────────────────────────────────────────────────
+    pygame.draw.circle(s, BLH, (11, 19), 2)
+    pygame.draw.circle(s, BLH, (21, 19), 2)
+
+    # ── Neck ──────────────────────────────────────────────────────
+    pygame.draw.rect(s, SK, (13, 24, 6, 4))
+
+    # ── Collar V-shape ────────────────────────────────────────────
+    pygame.draw.polygon(s, DR, [(10,26),(22,26),(19,29),(16,31),(13,29)])
+
+    # ── Dress bodice ──────────────────────────────────────────────
+    pygame.draw.rect(s, DR, (9, 27, 14, 10))
+
+    # ── Skirt flare ───────────────────────────────────────────────
+    pygame.draw.polygon(s, DR, [(6,36),(26,36),(29,44),(3,44)])
+    pygame.draw.polygon(s, DS, [(6,40),(26,40),(28,44),(4,44)])
+
+    # ── Trims ─────────────────────────────────────────────────────
+    pygame.draw.rect (s, GT, (9, 27, 14,  2))          # collar gold
+    pygame.draw.line (s, GT, (5, 41), (27, 41), 2)    # hem gold
+
+    # ── Front ribbon bow ──────────────────────────────────────────
+    pygame.draw.rect(s, RB,  (14, 28, 4, 8))
+    pygame.draw.rect(s, RBL, (13, 31, 6, 3))
+
+    # ── Stockings ─────────────────────────────────────────────────
+    pygame.draw.rect(s, ST, (10, 44, 5, 2))
+    pygame.draw.rect(s, ST, (17, 44, 5, 2))
+
+    # ── Boots ─────────────────────────────────────────────────────
+    pygame.draw.ellipse(s, BT,  (8,  41, 8, 5))
+    pygame.draw.ellipse(s, BT,  (16, 41, 8, 5))
+    pygame.draw.rect   (s, BTL, (9,  41, 3, 2))
+    pygame.draw.rect   (s, BTL, (17, 41, 3, 2))
+
+    return s
 
 
 class Platform(pygame.sprite.Sprite):
@@ -177,7 +207,7 @@ class Player(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, floor_y, patrol_range, color, is_boss=False):
+    def __init__(self, x, floor_y, patrol_range, color, is_boss=False, aggressive=False):
         super().__init__()
         if is_boss:
             w, h = 50, 55
@@ -208,14 +238,25 @@ class Enemy(pygame.sprite.Sprite):
         self.direction    = 1
         self.health       = self.max_health
         self.is_boss      = is_boss
+        self.aggressive   = aggressive
         self.hit_flash    = 0   # frames of white flash remaining
 
-    def update(self):
-        self.rect.x += int(self.speed * self.direction)
-        if self.rect.x >= self.start_x + self.patrol_range:
-            self.direction = -1
-        elif self.rect.x <= self.start_x:
-            self.direction = 1
+    def update(self, player_centerx=0):
+        if self.is_boss and self.aggressive:
+            # Chase the player instead of patrolling
+            dx = player_centerx - self.rect.centerx
+            if abs(dx) > 6:
+                self.rect.x += int(self.speed * (1 if dx > 0 else -1))
+            # Keep boss on its platform
+            left  = self.start_x - 10
+            right = self.start_x + self.patrol_range + 55
+            self.rect.x = max(left, min(self.rect.x, right))
+        else:
+            self.rect.x += int(self.speed * self.direction)
+            if self.rect.x >= self.start_x + self.patrol_range:
+                self.direction = -1
+            elif self.rect.x <= self.start_x:
+                self.direction = 1
 
         # Flash white briefly when hit
         if self.hit_flash > 0:
