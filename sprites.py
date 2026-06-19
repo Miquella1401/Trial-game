@@ -5,6 +5,61 @@ from settings import (
 )
 
 
+# ── Player sprite: pixel-art anime girl (Terraria-ish adventurer) ──────────
+PLAYER_PIX = 2  # size of one "pixel" block, in real pixels
+
+PLAYER_PALETTE = {
+    '.': None,                  # transparent
+    'H': (255, 105, 180),       # hair main - hot pink
+    'h': (214, 80, 150),        # hair shadow
+    'S': (255, 224, 196),       # skin
+    'E': (70, 60, 110),         # eyes
+    'W': (255, 255, 255),       # eye highlight
+    'C': (255, 160, 180),       # cheek blush
+    'D': (110, 190, 250),       # dress main - sky blue
+    'G': (255, 215, 80),        # gold trim
+    'L': (235, 235, 245),       # stockings
+    'B': (101, 67, 33),         # boots
+}
+
+# 14 columns x 19 rows -> 28x38 px at PLAYER_PIX=2 (matches the old hitbox)
+PLAYER_SPRITE = [
+    "..HHHHHHHHHH..",
+    ".HHHHHHHHHHHG.",
+    "HHhSSSSSSSShHH",
+    "HhSSSSSSSSSShH",
+    "HSSEESSSSEESSH",
+    "HSSWESSSSWESSH",
+    "hSCSSSSSSSSCSh",
+    "hhSSSSSSSSSShh",
+    "hhSSDDDDDDSShh",
+    "hDDDGGGGGGDDDh",
+    "SDDDDDDDDDDDDS",
+    "SDDDDDDDDDDDDS",
+    "SDDDDDDDDDDDDS",
+    "SSDDDDDDDDDDSS",
+    "..GGGGGGGGGG..",
+    "..LLL....LLL..",
+    "..LLL....LLL..",
+    "..BBB....BBB..",
+    "..BBB....BBB..",
+]
+
+
+def _build_player_surface():
+    pix = PLAYER_PIX
+    w = len(PLAYER_SPRITE[0]) * pix
+    h = len(PLAYER_SPRITE) * pix
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    for ry, row in enumerate(PLAYER_SPRITE):
+        for cx, ch in enumerate(row):
+            color = PLAYER_PALETTE[ch]
+            if color is None:
+                continue
+            surf.fill(color, (cx * pix, ry * pix, pix, pix))
+    return surf
+
+
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height, color):
         super().__init__()
@@ -32,9 +87,9 @@ class Goal(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, floor_y, level_num):
         super().__init__()
-        self.image = pygame.Surface((28, 38))
-        self.image.fill((70, 120, 200))
-        pygame.draw.rect(self.image, (50, 90, 160), (0, 0, 28, 38), 2)     # outline
+        self.image_right = _build_player_surface()
+        self.image_left  = pygame.transform.flip(self.image_right, True, False)
+        self.image = self.image_right
 
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -85,6 +140,8 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.vel_x = PLAYER_SPEED
             self.facing_right = True
+
+        self.image = self.image_right if self.facing_right else self.image_left
 
         self.vel_y = min(self.vel_y + GRAVITY, 18)
 
