@@ -239,24 +239,70 @@ class Enemy(pygame.sprite.Sprite):
         self.health       = self.max_health
         self.is_boss      = is_boss
         self.aggressive   = aggressive
-        self.hit_flash    = 0   # frames of white flash remaining
+        self.hit_flash    = 0
 
-    def update(self, player_centerx=0):
-        if self.is_boss and self.aggressive:
-            # Chase the player instead of patrolling
-            dx = player_centerx - self.rect.centerx
-            if abs(dx) > 6:
-                self.rect.x += int(self.speed * (1 if dx > 0 else -1))
-            # Keep boss on its platform
-            left  = self.start_x - 10
-            right = self.start_x + self.patrol_range + 55
-            self.rect.x = max(left, min(self.rect.x, right))
+        if self.aggressive:
+            self.speed     = 4.0
+            self.vel_y     = 0.0
+            self.on_ground = True
+            self.jump_cd   = 60     # frames before first jump
+            self.floor_y   = floor_y
+
+    def update(self, player_rect=None, platforms=None):
+        if self.is_boss and self.aggressive and player_rect is not None and platforms is not None:
+            self._update_aggressive(player_rect, platforms)
         else:
             self.rect.x += int(self.speed * self.direction)
             if self.rect.x >= self.start_x + self.patrol_range:
                 self.direction = -1
             elif self.rect.x <= self.start_x:
                 self.direction = 1
+
+    def _update_aggressive(self, player_rect, platforms):
+        # ── Horizontal chase ──────────────────────────────────────
+        dx = player_rect.centerx - self.rect.centerx
+        move = int(self.speed * (1 if dx > 0 else -1)) if abs(dx) > 5 else 0
+
+        self.rect.x += move
+        self.rect.x = max(0, min(self.rect.x, WORLD_WIDTH - self.rect.width))
+        for plat in platforms:
+            if self.rect.colliderect(plat.rect):
+                if move > 0:
+                    self.rect.right = plat.rect.left
+                elif move < 0:
+                    self.rect.left = plat.rect.right
+
+        # ── Gravity ───────────────────────────────────────────────
+        self.vel_y = min(self.vel_y + GRAVITY, 18)
+
+        # ── Jump AI ───────────────────────────────────────────────
+        self.jump_cd -= 1
+        if self.on_ground and self.jump_cd <= 0:
+            player_above = player_rect.centery < self.rect.top - 20
+            if player_above or self.jump_cd < -90:
+                self.vel_y   = -15
+                self.on_ground = False
+                self.jump_cd = 45
+
+        # ── Vertical movement + platform collision ────────────────
+        self.rect.y += int(self.vel_y)
+        self.on_ground = False
+        for plat in platforms:
+            if self.rect.colliderect(plat.rect):
+                if self.vel_y > 0:
+                    self.rect.bottom = plat.rect.top
+                    self.vel_y = 0
+                    self.on_ground = True
+                elif self.vel_y < 0:
+                    self.rect.top = plat.rect.bottom
+                    self.vel_y = 0
+
+        # ── Respawn if it falls into a pit ─────────────────────────
+        if self.rect.top > 700:
+            self.rect.x      = self.start_x
+            self.rect.bottom = self.floor_y
+            self.vel_y       = 0
+            self.on_ground   = True
 
         # Flash white briefly when hit
         if self.hit_flash > 0:

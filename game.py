@@ -134,7 +134,7 @@ class Game:
         if self.shoot_cd > 0:
             self.shoot_cd -= 1
 
-        self.enemies.update(self.player.rect.centerx)
+        self.enemies.update(self.player.rect, self.platforms)
         self.bullets.update()
 
         # Boss popup countdown (only ticks while playing)
